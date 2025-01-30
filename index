@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>הבריחה של איתמר</title>
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; direction: rtl; background-color: #e0f7fa; }
+        canvas { background: #ffffff; display: block; margin: auto; border: 2px solid #000; }
+        #gameOver { display: none; font-size: 20px; color: red; }
+        #coinCounter { font-size: 18px; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>הבריחה של איתמר</h1>
+    <div id="coinCounter">תותים שנאספו: 0</div>
+    <canvas id="gameCanvas" width="600" height="400"></canvas>
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const coinCounter = document.getElementById("coinCounter");
+        
+        let itamar = { x: 50, y: 200, size: 20, speed: 5, dx: 0, dy: 0 };
+        let parents = [
+            { x: 100, y: 100, size: 40, dx: 1, dy: 1 },
+            { x: 400, y: 200, size: 40, dx: -1, dy: 1 }
+        ];
+        let strawberries = [
+            { x: 200, y: 150, size: 10 },
+            { x: 400, y: 250, size: 10 }
+        ];
+        let rabbits = [
+            { x: 300, y: 300, size: 20, dx: 1, dy: 1, colors: ["brown", "orange", "yellow", "pink"], colorIndex: 0 }
+        ];
+        let coins = 0;
+        let gameOver = false;
+
+        function checkCollision(a, b) {
+            return a.x < b.x + b.size && a.x + a.size > b.x && a.y < b.y + b.size && a.y + a.size > b.y;
+        }
+
+        document.addEventListener("keydown", function(e) {
+            if (!gameOver) {
+                if (e.key === "ArrowUp") itamar.dy = -itamar.speed;
+                if (e.key === "ArrowDown") itamar.dy = itamar.speed;
+                if (e.key === "ArrowLeft") itamar.dx = -itamar.speed;
+                if (e.key === "ArrowRight") itamar.dx = itamar.speed;
+            }
+        });
+
+        document.addEventListener("keyup", function(e) {
+            if (e.key === "ArrowUp" || e.key === "ArrowDown") itamar.dy = 0;
+            if (e.key === "ArrowLeft" || e.key === "ArrowRight") itamar.dx = 0;
+        });
+
+        function update() {
+            if (gameOver) return;
+            
+            itamar.x += itamar.dx;
+            itamar.y += itamar.dy;
+            
+            parents.forEach(parent => {
+                parent.x += parent.dx;
+                parent.y += parent.dy;
+                if (parent.x > canvas.width || parent.x < 0) parent.dx *= -1;
+                if (parent.y > canvas.height || parent.y < 0) parent.dy *= -1;
+                if (checkCollision(itamar, parent)) {
+                    gameOver = true;
+                    let response = prompt("נתפסת! הקלד \"סליחה\" כדי להמשיך.");
+                    if (response === "סליחה") {
+                        gameOver = false;
+                        parents.forEach(parent => {
+                            parent.x = Math.random() * 600;
+                            parent.y = Math.random() * 400;
+                        });
+                    }
+                }
+            });
+            
+            rabbits.forEach(rabbit => {
+                rabbit.x += rabbit.dx;
+                rabbit.y += rabbit.dy;
+                if (rabbit.x > canvas.width || rabbit.x < 0) rabbit.dx *= -1;
+                if (rabbit.y > canvas.height || rabbit.y < 0) rabbit.dy *= -1;
+                
+                if (checkCollision(itamar, rabbit) && coins > 0) {
+                    coins--;
+                    coinCounter.textContent = `תותים שנאספו: ${coins}`;
+                    rabbit.colorIndex = (rabbit.colorIndex + 1) % rabbit.colors.length;
+                }
+            });
+            
+            strawberries.forEach((strawberry, index) => {
+                if (checkCollision(itamar, strawberry)) {
+                    coins++;
+                    coinCounter.textContent = `תותים שנאספו: ${coins}`;
+                    strawberries[index] = { x: Math.random() * 600, y: Math.random() * 400, size: 10 };
+                    
+                    if (coins % 5 === 0) {
+                        rabbits.push({
+                            x: Math.random() * 600,
+                            y: Math.random() * 400,
+                            size: 20,
+                            dx: 1,
+                            dy: 1,
+                            colors: ["brown", "orange", "yellow", "pink"],
+                            colorIndex: 0
+                        });
+                    }
+                }
+            });
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = "black";
+            parents.forEach(parent => ctx.fillRect(parent.x, parent.y, parent.size, parent.size));
+            
+            ctx.fillStyle = "blue";
+            ctx.beginPath();
+            ctx.arc(itamar.x, itamar.y, itamar.size / 2, Math.PI, 0, false);
+            ctx.fill();
+            ctx.fillRect(itamar.x - itamar.size / 2 - 5, itamar.y, 5, 5);
+            
+            ctx.fillStyle = "red";
+            strawberries.forEach(strawberry => ctx.fillRect(strawberry.x, strawberry.y, strawberry.size, strawberry.size));
+            
+            rabbits.forEach(rabbit => {
+                ctx.fillStyle = rabbit.colors[rabbit.colorIndex];
+                ctx.fillRect(rabbit.x, rabbit.y, rabbit.size, rabbit.size);
+                ctx.fillStyle = "black";
+                ctx.fillRect(rabbit.x - 5, rabbit.y - 10, 5, 10);
+                ctx.fillRect(rabbit.x + rabbit.size, rabbit.y - 10, 5, 10);
+            });
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        gameLoop();
+    </script>
+</body>
+</html>
